@@ -3,7 +3,6 @@ package inforus
 import (
 	"path"
 	"runtime"
-	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -53,35 +52,45 @@ func (h Hook) Levels() []log.Level {
 
 // Fire is ...
 func (h Hook) Fire(entry *log.Entry) error {
-	pc := make([]uintptr, 64)
-	cnt := runtime.Callers(skipFrameCnt, pc)
+	if pc, file, line, ok := runtime.Caller(8); ok {
+		funcName := runtime.FuncForPC(pc).Name()
 
-	for i := 0; i < cnt; i++ {
-		fu := runtime.FuncForPC(pc[i])
-		name := fu.Name()
-		if !strings.Contains(name, "github.com/Sirupsen/logrus") {
-			file, line := fu.FileLine(pc[i] - 1)
-			if h.file {
-				h.mu.Lock()
-				entry.Data["file"] = path.Base(file)
-				h.mu.Unlock()
-			}
-
-			if h.function {
-				h.mu.Lock()
-				entry.Data["func"] = path.Base(name)
-				h.mu.Unlock()
-			}
-
-			if h.line {
-				h.mu.Lock()
-				entry.Data["line"] = line
-				h.mu.Unlock()
-			}
-
-			break
-		}
+		entry.Data["file"] = path.Base(file)
+		entry.Data["func"] = path.Base(funcName)
+		entry.Data["line"] = line
 	}
 
 	return nil
+
+	// pc := make([]uintptr, 64)
+	// cnt := runtime.Callers(skipFrameCnt, pc)
+
+	// for i := 0; i < cnt; i++ {
+	// 	fu := runtime.FuncForPC(pc[i])
+	// 	name := fu.Name()
+	// 	if !strings.Contains(name, "github.com/Sirupsen/logrus") {
+	// 		file, line := fu.FileLine(pc[i] - 1)
+	// 		if h.file {
+	// 			h.mu.Lock()
+	// 			entry.Data["file"] = path.Base(file)
+	// 			h.mu.Unlock()
+	// 		}
+
+	// 		if h.function {
+	// 			h.mu.Lock()
+	// 			entry.Data["func"] = path.Base(name)
+	// 			h.mu.Unlock()
+	// 		}
+
+	// 		if h.line {
+	// 			h.mu.Lock()
+	// 			entry.Data["line"] = line
+	// 			h.mu.Unlock()
+	// 		}
+
+	// 		break
+	// 	}
+	// }
+
+	// return nil
 }
